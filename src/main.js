@@ -16,7 +16,7 @@ const state = {
   duration: 0,
 
   // Viewport size
-  previewSize: 'large', // 'standard' | 'large' | 'xl'
+  previewSize: 'standard', // 'standard' | 'large' | 'xl'
 
   // Video playback
   isPlaying: false,
@@ -188,6 +188,13 @@ function init() {
     updateStageFrameSize();
   });
 
+  if (window.ResizeObserver && dom.mediaContainer) {
+    const ro = new ResizeObserver(() => {
+      updateStageFrameSize();
+    });
+    ro.observe(dom.mediaContainer);
+  }
+
   bindTabEvents();
   bindUploadEvents();
   bindViewportSizeEvents();
@@ -318,6 +325,8 @@ async function restoreDraft(draft) {
   // Restore viewport size
   if (draft.previewSize) {
     setPreviewSize(draft.previewSize);
+  } else {
+    setPreviewSize('standard');
   }
 
   // Restore clip range
@@ -505,14 +514,21 @@ async function handleFile(file) {
   dom.fileBadge.textContent = isGif ? 'GIF 动图' : 'VIDEO 视频';
   dom.fileBadge.className = isGif ? 'badge' : 'badge badge-emerald';
 
+  // Show editor workspace FIRST so container dimensions are measurable by layout engine
+  dom.uploadZone.classList.add('hidden');
+  dom.editorWorkspace.classList.remove('hidden');
+  setPreviewSize(state.previewSize || 'standard');
+
   if (isGif) {
     await loadGifFile(file);
   } else {
     await loadVideoFile(file);
   }
 
-  dom.uploadZone.classList.add('hidden');
-  dom.editorWorkspace.classList.remove('hidden');
+  updateStageFrameSize();
+  requestAnimationFrame(() => {
+    updateStageFrameSize();
+  });
   updateEstimation();
   scheduleDraftSave();
 }
@@ -882,8 +898,10 @@ function bindCropEvents() {
 function updateStageFrameSize() {
   if (!state.mediaWidth || !state.mediaHeight || !dom.mediaStageFrame) return;
   const containerRect = dom.mediaContainer.getBoundingClientRect();
-  const maxW = Math.max(100, containerRect.width - 24);
-  const maxH = Math.max(100, containerRect.height - 24);
+  const cWidth = containerRect.width || dom.mediaContainer.clientWidth || (window.innerWidth > 900 ? 760 : 380);
+  const cHeight = containerRect.height || dom.mediaContainer.clientHeight || 480;
+  const maxW = Math.max(160, cWidth - 28);
+  const maxH = Math.max(160, cHeight - 28);
   const scale = Math.min(maxW / state.mediaWidth, maxH / state.mediaHeight);
   const displayW = Math.max(50, Math.round(state.mediaWidth * scale));
   const displayH = Math.max(50, Math.round(state.mediaHeight * scale));
