@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>GifPulse 灵动动图 - 视频转GIF与极速动图压缩</title>
+  <meta name="description" content="新一代前卫时尚的视频转GIF动图与GIF二次压缩工坊，纯浏览器本地异步处理，保护隐私，支持时间轴精准微调、微信表情包一键预设、画面裁剪、倒放鬼畜与表情包文字水印。" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body class="app-body">
+  <!-- Subtle Background Glows -->
+  <div class="nebula-glow nebula-emerald"></div>
+  <div class="nebula-glow nebula-violet"></div>
+  <div class="nebula-grid-overlay"></div>
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand-group">
+        <a href="/" id="brand-refresh-link" class="brand-link" title="点击刷新页面">
+          <div class="brand-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+              <circle cx="19" cy="12" r="2" fill="currentColor"></circle>
+            </svg>
+          </div>
+          <div class="brand-text">
+            <h1 class="brand-title">灵动图</h1>
+            <span class="brand-tagline">100% 纯本地离线 • 隐私零上传</span>
+          </div>
+        </a>
+      </div>
+
+      <!-- Mode Switcher Tabs -->
+      <nav class="mode-tabs" role="tablist">
+        <button id="tab-video" class="mode-tab-btn active" role="tab" aria-selected="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2"/></svg>
+          <span>视频转 GIF</span>
+        </button>
+        <button id="tab-compress" class="mode-tab-btn" role="tab" aria-selected="false">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m8 17 4 4 4-4"/></svg>
+          <span>GIF 压缩优化</span>
+        </button>
+      </nav>
+
+      <!-- Quick Sample Action -->
+      <div class="header-actions">
+        <button id="btn-quick-sample" class="glass-btn btn-sm">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+          <span>一键体验示例</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="app-main">
+    
+    <!-- Upload Dropzone (Visible when no active file) -->
+    <section id="upload-zone" class="upload-zone">
+      <div class="upload-card">
+        <input type="file" id="file-input" class="file-input-hidden" accept="video/*,.mp4,.webm,.mov,.mkv,.gif,image/gif" />
+        <div class="upload-icon-pulse">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+        </div>
+        <h2 class="upload-title" id="upload-title-text">点击或拖拽上传视频 / GIF 动图</h2>
+        <p class="upload-desc" id="upload-desc-text">支持 MP4, WebM, MOV, MKV, GIF 格式 • 浏览器本地高速渲染，保护您的私密影像</p>
+        
+        <div class="upload-action-row">
+          <button id="btn-browse-file" class="glow-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+            <span>选择本地文件 / 手机相册</span>
+          </button>
+          <button id="btn-load-demo-video" class="glass-btn">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            <span>加载动态演示视频</span>
+          </button>
+        </div>
+
+        <div class="feature-pills">
+          <span class="feat-pill"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> 微信表情包一键达标</span>
+          <span class="feat-pill"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> 毫秒级时间轴剪辑</span>
+          <span class="feat-pill"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> 倒放 & 鬼畜 Boomerang</span>
+          <span class="feat-pill"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> 自由比例裁切</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Editor Workspace (Visible after file loaded) -->
+    <section id="editor-workspace" class="editor-workspace hidden">
+      
+      <!-- Top File Info Bar -->
+      <div class="file-info-bar">
+        <div class="file-meta">
+          <span id="file-badge" class="badge badge-emerald">VIDEO</span>
+          <span id="file-name" class="file-name-text">video_01.mp4</span>
+          <span id="file-specs" class="file-specs-text">1920×1080 • 00:04.8 • 4.5 MB</span>
+        </div>
+        <div class="file-controls">
+          <button id="btn-change-file" class="glass-btn btn-sm">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span>更换文件</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Studio Grid: Left Preview & Timeline / Right Controls -->
+      <div class="studio-grid">
+        
+        <!-- Left Column: Video/GIF Viewport + Timeline -->
+        <div class="studio-stage-panel">
+          
+          <!-- Viewport Stage -->
+          <div class="viewport-wrapper" id="viewport-wrapper">
+            <div class="media-container" id="media-container">
+              <div class="media-stage-frame" id="media-stage-frame">
+                <video id="preview-video" playsinline webkit-playsinline preload="auto" class="preview-media"></video>
+                <canvas id="preview-canvas" class="preview-media hidden"></canvas>
+
+                <!-- Interactive Crop Overlay strictly bound to video frame -->
+                <div id="crop-box" class="crop-box hidden">
+                  <div class="crop-grid-lines"></div>
+                  <div class="crop-handle handle-tl" data-handle="tl"></div>
+                  <div class="crop-handle handle-tr" data-handle="tr"></div>
+                  <div class="crop-handle handle-bl" data-handle="bl"></div>
+                  <div class="crop-handle handle-br" data-handle="br"></div>
+                  <div class="crop-handle handle-t" data-handle="t"></div>
+                  <div class="crop-handle handle-b" data-handle="b"></div>
+                  <div class="crop-handle handle-l" data-handle="l"></div>
+                  <div class="crop-handle handle-r" data-handle="r"></div>
+                  <span id="crop-dim-badge" class="crop-dim-badge">1:1 (400×400)</span>
+                </div>
+
+                <!-- Live Meme Overlay Preview strictly bound to picture frame -->
+                <div id="meme-overlay" class="meme-overlay hidden">
+                  <div id="meme-preview-top" class="meme-text-render meme-top"></div>
+                  <div id="meme-preview-bottom" class="meme-text-render meme-bottom"></div>
+                  <div id="watermark-preview" class="watermark-text-render pos-br"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Viewport Playback Controller -->
+            <div class="viewport-controls">
+              <button id="btn-play-pause" class="vp-btn" title="播放/暂停">
+                <svg id="icon-play" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                <svg id="icon-pause" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" class="hidden"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+              </button>
+              <div class="vp-time-display">
+                <span id="time-current">00:00.00</span> / <span id="time-duration">00:05.00</span>
+              </div>
+              <div class="vp-actions">
+                <button id="btn-toggle-crop" class="vp-tool-btn" title="开启/关闭画面裁切">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/></svg>
+                  <span>裁剪画面</span>
+                </button>
+                <button id="btn-toggle-loop" class="vp-tool-btn active" title="选区循环播放">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>
+                  <span>循环选区</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Timeline Scrubber with Range Handles -->
+          <div class="timeline-container" id="timeline-container">
+            <div class="timeline-header">
+              <div class="timeline-info">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>
+                <span>时间轴截取：</span>
+                <strong id="clip-range-text">00:00.00 ~ 00:03.00</strong>
+                <span class="clip-duration-badge" id="clip-duration-badge">3.0 秒</span>
+              </div>
+              <div class="timeline-nudge-group">
+                <button id="btn-nudge-left" class="nudge-btn" title="起点微调 -0.1s">-0.1s</button>
+                <button id="btn-nudge-right" class="nudge-btn" title="终点微调 +0.1s">+0.1s</button>
+                <button id="btn-reset-range" class="nudge-btn" title="重置全选">全选</button>
+              </div>
+            </div>
+
+            <!-- Visual Track -->
+            <div class="timeline-track-wrap" id="timeline-track-wrap">
+              <div class="timeline-track" id="timeline-track">
+                <!-- Thumbnail or wave pattern background -->
+                <div class="timeline-visual-strip" id="timeline-visual-strip"></div>
+                <!-- Selected active zone -->
+                <div class="timeline-selection" id="timeline-selection">
+                  <div class="trim-handle trim-start" id="handle-start" data-handle="start">
+                    <div class="handle-bar"></div>
+                  </div>
+                  <div class="trim-handle trim-end" id="handle-end" data-handle="end">
+                    <div class="handle-bar"></div>
+                  </div>
+                </div>
+                <!-- Playhead Indicator -->
+                <div class="timeline-playhead" id="timeline-playhead">
+                  <div class="playhead-line"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Right Column: Settings & Configuration Drawer -->
+        <div class="studio-controls-panel">
+          
+          <!-- Smart Presets Row -->
+          <div class="control-section">
+            <div class="section-title">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+              <span>一键预设方案</span>
+            </div>
+            <div class="preset-grid">
+              <button class="preset-card active" data-preset="wechat-1m">
+                <div class="preset-icon">💬</div>
+                <div class="preset-content">
+                  <div class="preset-name">微信表情包</div>
+                  <div class="preset-sub">&lt; 1MB • 快速过审</div>
+                </div>
+              </button>
+              <button class="preset-card" data-preset="wechat-5m">
+                <div class="preset-icon">🌟</div>
+                <div class="preset-content">
+                  <div class="preset-name">微信大表情</div>
+                  <div class="preset-sub">&lt; 5MB • 极致清晰</div>
+                </div>
+              </button>
+              <button class="preset-card" data-preset="discord">
+                <div class="preset-icon">👾</div>
+                <div class="preset-content">
+                  <div class="preset-name">Discord Emoji</div>
+                  <div class="preset-sub">128px • &lt; 256KB</div>
+                </div>
+              </button>
+              <button class="preset-card" data-preset="hd">
+                <div class="preset-icon">💎</div>
+                <div class="preset-content">
+                  <div class="preset-name">高清全彩</div>
+                  <div class="preset-sub">600px • 20 FPS</div>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <!-- Video Mode Controls: Resolution, FPS, Speed, Playback -->
+          <div id="video-specific-controls">
+            <!-- Aspect Ratio & Resolution -->
+            <div class="control-section">
+              <div class="section-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+                <span>裁剪比例 & 导出尺寸</span>
+              </div>
+              <div class="chip-group" id="crop-ratio-chips">
+                <button class="chip-btn active" data-ratio="free">自由</button>
+                <button class="chip-btn" data-ratio="1:1">1:1 方形</button>
+                <button class="chip-btn" data-ratio="9:16">9:16 竖屏</button>
+                <button class="chip-btn" data-ratio="16:9">16:9 宽屏</button>
+                <button class="chip-btn" data-ratio="4:3">4:3</button>
+              </div>
+
+              <div class="param-row mt-3">
+                <div class="d-flex align-items-center justify-content-between">
+                  <label class="param-label">导出分辨率设定</label>
+                  <span id="res-calc-badge" class="res-calc-badge">400 × 400 px</span>
+                </div>
+                <div class="segmented-control" id="res-selector">
+                  <button class="seg-btn" data-res="280">280p</button>
+                  <button class="seg-btn active" data-res="400">400p</button>
+                  <button class="seg-btn" data-res="540">540p</button>
+                  <button class="seg-btn" data-res="720">720p</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- FPS & Playback Speed -->
+            <div class="control-section">
+              <div class="section-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <span>帧率 (FPS) & 播放模式</span>
+              </div>
+              <div class="param-row">
+                <div class="slider-header">
+                  <span class="param-label">帧率 (FPS)</span>
+                  <span id="fps-val" class="slider-badge">12 FPS</span>
+                </div>
+                <input type="range" id="slider-fps" min="6" max="24" step="1" value="12" class="custom-slider" />
+                <div class="slider-scale">
+                  <span>6 (微体积)</span>
+                  <span>12 (推荐)</span>
+                  <span>18</span>
+                  <span>24 (极丝滑)</span>
+                </div>
+              </div>
+
+              <div class="param-row mt-3">
+                <label class="param-label">调速倍率</label>
+                <div class="segmented-control" id="speed-selector">
+                  <button class="seg-btn" data-speed="0.5">0.5x</button>
+                  <button class="seg-btn" data-speed="0.75">0.75x</button>
+                  <button class="seg-btn active" data-speed="1.0">1.0x</button>
+                  <button class="seg-btn" data-speed="1.5">1.5x</button>
+                  <button class="seg-btn" data-speed="2.0">2.0x</button>
+                </div>
+              </div>
+
+              <div class="param-row mt-3">
+                <label class="param-label">回放特效</label>
+                <div class="chip-group" id="playback-chips">
+                  <button class="chip-btn active" data-playback="normal">▶️ 正常正放</button>
+                  <button class="chip-btn" data-playback="reverse">⏪ 魔法倒放</button>
+                  <button class="chip-btn" data-playback="boomerang">🪃 鬼畜 Boomerang</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Color Palette & Dithering -->
+            <div class="control-section">
+              <div class="section-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.563-2.512 5.563-5.563C22 6.5 17.5 2 12 2Z"/></svg>
+                <span>色彩与压缩量化</span>
+              </div>
+              <div class="param-row">
+                <label class="param-label">调色板颜色数</label>
+                <div class="segmented-control" id="colors-selector">
+                  <button class="seg-btn" data-colors="32">32色</button>
+                  <button class="seg-btn active" data-colors="64">64色</button>
+                  <button class="seg-btn" data-colors="128">128色</button>
+                  <button class="seg-btn" data-colors="256">256色</button>
+                </div>
+              </div>
+              <div class="param-toggle-row mt-3">
+                <div>
+                  <div class="toggle-title">Floyd-Steinberg 抖动</div>
+                  <div class="toggle-desc">渐变过渡更细腻，关闭则体积进一步缩小 25%</div>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="switch-dither" checked />
+                  <span class="slider-round"></span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Meme Text & Watermark (Collapsible) -->
+            <details class="control-section accordion-section">
+              <summary class="section-title accordion-header">
+                <div class="d-flex align-items-center gap-2">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>
+                  <span>表情包文字 & 水印 (可选)</span>
+                </div>
+                <svg class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+              </summary>
+              <div class="accordion-content">
+                <div class="form-group mt-2">
+                  <label class="input-label">顶部大字 (TOP TEXT)</label>
+                  <input type="text" id="input-top-text" class="glass-input" placeholder="例如：当周五下班铃响起..." />
+                </div>
+                <div class="form-group mt-2">
+                  <label class="input-label">底部大字 (BOTTOM TEXT)</label>
+                  <input type="text" id="input-bottom-text" class="glass-input" placeholder="例如：一秒都不想多呆！" />
+                </div>
+                <div class="form-group mt-2">
+                  <label class="input-label">水印签名</label>
+                  <div class="d-flex gap-2">
+                    <input type="text" id="input-watermark" class="glass-input" placeholder="@我的小红书/微信" />
+                    <select id="select-watermark-pos" class="glass-select">
+                      <option value="br">右下角</option>
+                      <option value="bl">左下角</option>
+                      <option value="tr">右上角</option>
+                      <option value="tl">左上角</option>
+                      <option value="center">居中</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </details>
+          </div>
+
+          <!-- GIF Compress Mode Specific Controls -->
+          <div id="compress-specific-controls" class="hidden">
+            <div class="control-section">
+              <div class="section-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                <span>压缩强度控制</span>
+              </div>
+              <div class="param-row">
+                <div class="slider-header">
+                  <span class="param-label">尺寸缩放比 (Scale)</span>
+                  <span id="compress-scale-val" class="slider-badge">75%</span>
+                </div>
+                <input type="range" id="slider-compress-scale" min="25" max="100" step="5" value="75" class="custom-slider" />
+              </div>
+              <div class="param-row mt-3">
+                <label class="param-label">智能抽帧策略</label>
+                <div class="segmented-control" id="compress-skip-selector">
+                  <button class="seg-btn active" data-skip="1">保留全部</button>
+                  <button class="seg-btn" data-skip="2">隔帧抽帧 (减半)</button>
+                  <button class="seg-btn" data-skip="3">抽 2 留 1 (超轻)</button>
+                </div>
+              </div>
+              <div class="param-row mt-3">
+                <label class="param-label">色彩重采样</label>
+                <div class="segmented-control" id="compress-colors-selector">
+                  <button class="seg-btn" data-colors="32">32色 (极速)</button>
+                  <button class="seg-btn active" data-colors="64">64色 (推荐)</button>
+                  <button class="seg-btn" data-colors="128">128色</button>
+                  <button class="seg-btn" data-colors="256">256色</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bottom Execution Bar (Sticky on Mobile) -->
+          <div class="action-footer">
+            <div class="estimation-badge">
+              <span class="est-dot"></span>
+              <span id="est-text">预估帧数: ~36 帧 • 预估大小: ~900 KB</span>
+            </div>
+            <button id="btn-generate-gif" class="glow-btn btn-lg w-100">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              <span id="btn-generate-text">立即生成 GIF 动图</span>
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Processing Modal -->
+  <div id="modal-processing" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="spinner-pulse-ring"></div>
+      <h3 class="modal-title" id="progress-status-title">正在处理动图...</h3>
+      <p class="modal-sub" id="progress-status-sub">浏览器后台线程渲染中，请稍候</p>
+      
+      <div class="progress-bar-wrap">
+        <div id="progress-bar-fill" class="progress-bar-fill" style="width: 0%"></div>
+      </div>
+      <div class="progress-stats">
+        <span id="progress-percent">0%</span>
+        <span id="progress-frames">0 / 0 帧</span>
+      </div>
+
+      <button id="btn-cancel-process" class="glass-btn btn-sm mt-3">取消处理</button>
+    </div>
+  </div>
+
+  <!-- Result Modal -->
+  <div id="modal-result" class="modal-backdrop hidden">
+    <div class="modal-card modal-result-card">
+      <div class="result-header">
+        <div class="badge badge-emerald">✨ 转换完成</div>
+        <button id="btn-close-result" class="icon-close-btn" aria-label="关闭">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <div class="result-preview-box">
+        <img id="result-gif-img" alt="生成的GIF动图" class="result-gif-img" />
+      </div>
+
+      <!-- Stats Pill Grid -->
+      <div class="result-stats-grid">
+        <div class="stat-pill">
+          <span class="stat-label">文件体积</span>
+          <strong id="res-stat-size" class="stat-val stat-highlight">840 KB</strong>
+        </div>
+        <div class="stat-pill">
+          <span class="stat-label">分辨率</span>
+          <strong id="res-stat-dim" class="stat-val">400×400</strong>
+        </div>
+        <div class="stat-pill">
+          <span class="stat-label">总帧数 / 时长</span>
+          <strong id="res-stat-frames" class="stat-val">36 帧 • 3.0s</strong>
+        </div>
+        <div class="stat-pill">
+          <span class="stat-label">优化节省</span>
+          <strong id="res-stat-saving" class="stat-val stat-saving">-72%</strong>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="result-action-grid">
+        <a id="btn-download-gif" class="glow-btn btn-lg" download="gifpulse.gif">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span>下载 GIF 动图</span>
+        </a>
+        <button id="btn-copy-clipboard" class="glass-btn btn-lg">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+          <span>复制到剪贴板</span>
+        </button>
+        <button id="btn-share-mobile" class="glass-btn btn-lg">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          <span>系统一键分享</span>
+        </button>
+      </div>
+
+      <p class="result-tip">💡 提示：微信聊天框中可直接长按“发送给朋友”或添加到自定义表情包中！</p>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

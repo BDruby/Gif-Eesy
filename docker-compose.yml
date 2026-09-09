@@ -1,0 +1,7 @@
+services:
+  gif-eesy:
+    build: .
+    container_name: gif-eesy-app
+    restart: always
+    ports:
+      - "80:80"
