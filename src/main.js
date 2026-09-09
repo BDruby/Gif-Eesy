@@ -1,7 +1,6 @@
 import confetti from 'canvas-confetti';
 import { extractVideoFrames } from './engine/video-processor.js';
 import { decodeGif, processGifFramesForCompression } from './engine/gif-optimizer.js';
-import { generateSampleVideo } from './engine/sample-generator.js';
 
 // --- State Management ---
 const state = {
@@ -58,14 +57,12 @@ const dom = {
   brandRefreshLink: document.getElementById('brand-refresh-link'),
   tabVideo: document.getElementById('tab-video'),
   tabCompress: document.getElementById('tab-compress'),
-  btnQuickSample: document.getElementById('btn-quick-sample'),
   
   uploadZone: document.getElementById('upload-zone'),
   uploadTitle: document.getElementById('upload-title-text'),
   uploadDesc: document.getElementById('upload-desc-text'),
   fileInput: document.getElementById('file-input'),
   btnBrowseFile: document.getElementById('btn-browse-file'),
-  btnLoadDemoVideo: document.getElementById('btn-load-demo-video'),
 
   editorWorkspace: document.getElementById('editor-workspace'),
   btnChangeFile: document.getElementById('btn-change-file'),
@@ -178,10 +175,6 @@ function init() {
 function bindTabEvents() {
   dom.tabVideo.addEventListener('click', () => setMode('video'));
   dom.tabCompress.addEventListener('click', () => setMode('compress'));
-
-  dom.btnQuickSample.addEventListener('click', async () => {
-    loadSampleDemo();
-  });
 }
 
 function setMode(mode) {
@@ -218,8 +211,6 @@ function bindUploadEvents() {
   dom.btnBrowseFile.addEventListener('click', () => dom.fileInput.click());
   dom.btnChangeFile.addEventListener('click', () => dom.fileInput.click());
 
-  dom.btnLoadDemoVideo.addEventListener('click', () => loadSampleDemo());
-
   dom.fileInput.addEventListener('change', (e) => {
     const file = e.target.files?.[0];
     if (file) handleFile(file);
@@ -245,24 +236,6 @@ function bindUploadEvents() {
     const file = e.dataTransfer?.files?.[0];
     if (file) handleFile(file);
   });
-}
-
-async function loadSampleDemo() {
-  dom.btnLoadDemoVideo.disabled = true;
-  dom.btnLoadDemoVideo.innerHTML = '<span>⚡ 正在实时合成演示视频...</span>';
-  try {
-    const file = await generateSampleVideo();
-    handleFile(file);
-  } catch (err) {
-    console.error('Failed to generate sample video:', err);
-    alert('合成演示视频失败，请手动选择本地视频文件');
-  } finally {
-    dom.btnLoadDemoVideo.disabled = false;
-    dom.btnLoadDemoVideo.innerHTML = `
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-      <span>加载动态演示视频</span>
-    `;
-  }
 }
 
 async function handleFile(file) {
