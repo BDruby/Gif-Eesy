@@ -1,6 +1,7 @@
 import confetti from 'canvas-confetti';
 import { extractVideoFrames } from './engine/video-processor.js';
 import { decodeGif, processGifFramesForCompression } from './engine/gif-optimizer.js';
+import { saveDraft, getDraft, clearDraft } from './engine/draft-store.js';
 
 // --- State Management ---
 const state = {
@@ -13,6 +14,9 @@ const state = {
   mediaWidth: 0,
   mediaHeight: 0,
   duration: 0,
+
+  // Viewport size
+  previewSize: 'large', // 'standard' | 'large' | 'xl'
 
   // Video playback
   isPlaying: false,
@@ -57,6 +61,13 @@ const dom = {
   brandRefreshLink: document.getElementById('brand-refresh-link'),
   tabVideo: document.getElementById('tab-video'),
   tabCompress: document.getElementById('tab-compress'),
+
+  // Draft Recovery Bar
+  draftRecoveryBar: document.getElementById('draft-recovery-bar'),
+  draftFileName: document.getElementById('draft-file-name'),
+  draftTimeText: document.getElementById('draft-time-text'),
+  btnRestoreDraft: document.getElementById('btn-restore-draft'),
+  btnDiscardDraft: document.getElementById('btn-discard-draft'),
   
   uploadZone: document.getElementById('upload-zone'),
   uploadTitle: document.getElementById('upload-title-text'),
@@ -79,6 +90,7 @@ const dom = {
   cropBox: document.getElementById('crop-box'),
   cropDimBadge: document.getElementById('crop-dim-badge'),
   resCalcBadge: document.getElementById('res-calc-badge'),
+  vpSizeBtns: document.querySelectorAll('.vp-size-btn'),
   btnToggleCrop: document.getElementById('btn-toggle-crop'),
   btnToggleLoop: document.getElementById('btn-toggle-loop'),
   btnPlayPause: document.getElementById('btn-play-pause'),
@@ -153,9 +165,24 @@ function init() {
   if (dom.brandRefreshLink) {
     dom.brandRefreshLink.addEventListener('click', (e) => {
       e.preventDefault();
-      window.location.reload();
+      if (state.file) {
+        if (confirm('当前正在编辑任务中，重新载入页面将离开当前工作区（草稿已自动缓存，可在再次进入时恢复）。确定刷新页面吗？')) {
+          window.location.reload();
+        }
+      } else {
+        window.location.reload();
+      }
     });
   }
+
+  // Anti-refresh & leaving protection
+  window.addEventListener('beforeunload', (e) => {
+    if (state.file) {
+      e.preventDefault();
+      e.returnValue = '';
+      return '';
+    }
+  });
 
   window.addEventListener('resize', () => {
     updateStageFrameSize();
@@ -163,11 +190,225 @@ function init() {
 
   bindTabEvents();
   bindUploadEvents();
+  bindViewportSizeEvents();
   bindPlayerEvents();
   bindTimelineEvents();
   bindCropEvents();
   bindControlsEvents();
   bindResultEvents();
+  updateEstimation();
+
+  // Check saved draft in IndexedDB
+  checkAndPromptDraftRecovery();
+}
+
+// --- Viewport Size Adjustment ---
+function bindViewportSizeEvents() {
+  dom.vpSizeBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const size = btn.dataset.size;
+      if (size) {
+        setPreviewSize(size);
+      }
+    });
+  });
+}
+
+function setPreviewSize(size) {
+  state.previewSize = size;
+  dom.mediaContainer.classList.remove('size-standard', 'size-large', 'size-xl');
+  dom.mediaContainer.classList.add(`size-${size}`);
+
+  dom.vpSizeBtns.forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.size === size);
+  });
+
+  updateStageFrameSize();
+  setTimeout(updateStageFrameSize, 160);
+  setTimeout(updateStageFrameSize, 320);
+  scheduleDraftSave();
+}
+
+// --- Draft Persistence & Recovery ---
+let draftSaveTimer = null;
+function scheduleDraftSave() {
+  if (!state.file) return;
+  clearTimeout(draftSaveTimer);
+  draftSaveTimer = setTimeout(async () => {
+    try {
+      const draftData = {
+        file: state.file,
+        fileName: state.file?.name || (state.fileType === 'gif' ? 'draft.gif' : 'draft.mp4'),
+        fileType: state.fileType,
+        mode: state.mode,
+        previewSize: state.previewSize,
+        trimStart: state.trimStart,
+        trimEnd: state.trimEnd,
+        cropActive: state.cropActive,
+        cropRatio: state.cropRatio,
+        crop: { ...state.crop },
+        resolution: state.resolution,
+        fps: state.fps,
+        speed: state.speed,
+        playback: state.playback,
+        colors: state.colors,
+        dither: state.dither,
+        topText: state.topText,
+        bottomText: state.bottomText,
+        watermark: state.watermark,
+        watermarkPos: state.watermarkPos,
+        compressScale: state.compressScale,
+        compressSkip: state.compressSkip,
+        compressColors: state.compressColors
+      };
+      await saveDraft(draftData);
+    } catch (e) {
+      console.warn('Auto save draft error:', e);
+    }
+  }, 400);
+}
+
+function formatRelativeTime(timestamp) {
+  if (!timestamp) return '刚刚';
+  const diffSec = Math.floor((Date.now() - timestamp) / 1000);
+  if (diffSec < 60) return '刚刚';
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin} 分钟前`;
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) return `${diffHour} 小时前`;
+  return `${Math.floor(diffHour / 24)} 天前`;
+}
+
+async function checkAndPromptDraftRecovery() {
+  try {
+    const draft = await getDraft();
+    if (draft && draft.file && !state.file) {
+      dom.draftFileName.textContent = draft.fileName || (draft.file?.name) || '未命名文件';
+      dom.draftTimeText.textContent = formatRelativeTime(draft.savedAt);
+      dom.draftRecoveryBar.classList.remove('hidden');
+
+      dom.btnRestoreDraft.onclick = async () => {
+        await restoreDraft(draft);
+      };
+
+      dom.btnDiscardDraft.onclick = async () => {
+        await clearDraft();
+        dom.draftRecoveryBar.classList.add('hidden');
+      };
+    }
+  } catch (err) {
+    console.warn('Error checking draft:', err);
+  }
+}
+
+async function restoreDraft(draft) {
+  if (!draft || !draft.file) return;
+
+  // Hide recovery banner
+  dom.draftRecoveryBar.classList.add('hidden');
+
+  // Restore file first
+  await handleFile(draft.file);
+
+  // Restore mode
+  if (draft.mode && draft.mode !== state.mode) {
+    setMode(draft.mode);
+  }
+
+  // Restore viewport size
+  if (draft.previewSize) {
+    setPreviewSize(draft.previewSize);
+  }
+
+  // Restore clip range
+  if (typeof draft.trimStart === 'number' && typeof draft.trimEnd === 'number') {
+    state.trimStart = draft.trimStart;
+    state.trimEnd = draft.trimEnd;
+  }
+
+  // Restore crop
+  if (draft.crop) {
+    state.crop = { ...draft.crop };
+  }
+  if (draft.cropRatio) {
+    state.cropRatio = draft.cropRatio;
+    const ratioChips = document.querySelectorAll('#crop-ratio-chips .chip-btn');
+    ratioChips.forEach(b => b.classList.toggle('active', b.dataset.ratio === draft.cropRatio));
+  }
+  if (draft.cropActive) {
+    state.cropActive = true;
+    dom.btnToggleCrop.classList.add('active');
+    dom.cropBox.classList.remove('hidden');
+  } else {
+    disableCrop();
+  }
+
+  // Restore video parameters
+  if (draft.resolution) {
+    state.resolution = draft.resolution;
+    setActiveSeg('res-selector', String(draft.resolution));
+  }
+  if (draft.fps) {
+    state.fps = draft.fps;
+    dom.fpsSlider.value = String(draft.fps);
+    dom.fpsVal.textContent = `${draft.fps} FPS`;
+  }
+  if (draft.speed) {
+    state.speed = draft.speed;
+    setActiveSeg('speed-selector', String(draft.speed));
+  }
+  if (draft.playback) {
+    state.playback = draft.playback;
+    const playChips = document.querySelectorAll('#playback-chips .chip-btn');
+    playChips.forEach(b => b.classList.toggle('active', b.dataset.playback === draft.playback));
+  }
+  if (draft.colors) {
+    state.colors = draft.colors;
+    setActiveSeg('colors-selector', String(draft.colors));
+  }
+  if (typeof draft.dither === 'boolean') {
+    state.dither = draft.dither;
+    dom.switchDither.checked = draft.dither;
+  }
+
+  // Restore meme text & watermark
+  if (typeof draft.topText === 'string') {
+    state.topText = draft.topText;
+    dom.inputTopText.value = draft.topText;
+  }
+  if (typeof draft.bottomText === 'string') {
+    state.bottomText = draft.bottomText;
+    dom.inputBottomText.value = draft.bottomText;
+  }
+  if (typeof draft.watermark === 'string') {
+    state.watermark = draft.watermark;
+    dom.inputWatermark.value = draft.watermark;
+  }
+  if (draft.watermarkPos) {
+    state.watermarkPos = draft.watermarkPos;
+    dom.selectWatermarkPos.value = draft.watermarkPos;
+  }
+
+  // Restore compress options
+  if (draft.compressScale) {
+    state.compressScale = draft.compressScale;
+    const pct = Math.round(draft.compressScale * 100);
+    dom.compressScaleSlider.value = String(pct);
+    dom.compressScaleVal.textContent = `${pct}%`;
+  }
+  if (draft.compressSkip) {
+    state.compressSkip = draft.compressSkip;
+    setActiveSeg('compress-skip-selector', String(draft.compressSkip));
+  }
+  if (draft.compressColors) {
+    state.compressColors = draft.compressColors;
+    setActiveSeg('compress-colors-selector', String(draft.compressColors));
+  }
+
+  updateStageFrameSize();
+  updateTimelineUI();
+  updateCropUI();
+  updateMemePreview();
   updateEstimation();
 }
 
@@ -209,7 +450,14 @@ function setMode(mode) {
 // --- Upload & File Ingestion ---
 function bindUploadEvents() {
   dom.btnBrowseFile.addEventListener('click', () => dom.fileInput.click());
-  dom.btnChangeFile.addEventListener('click', () => dom.fileInput.click());
+  dom.btnChangeFile.addEventListener('click', () => {
+    if (state.file) {
+      if (!confirm('更换新文件将替换当前工作区的编辑内容，确定更换吗？')) {
+        return;
+      }
+    }
+    dom.fileInput.click();
+  });
 
   dom.fileInput.addEventListener('change', (e) => {
     const file = e.target.files?.[0];
@@ -242,7 +490,7 @@ async function handleFile(file) {
   state.file = file;
   state.fileSize = file.size;
 
-  const isGif = file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif');
+  const isGif = file.type === 'image/gif' || (file.name && file.name.toLowerCase().endsWith('.gif'));
   state.fileType = isGif ? 'gif' : 'video';
 
   // Automatically adjust mode if file doesn't match current tab
@@ -253,7 +501,7 @@ async function handleFile(file) {
   }
 
   // Update Top Info Bar
-  dom.fileName.textContent = file.name;
+  dom.fileName.textContent = file.name || (isGif ? 'draft.gif' : 'draft.mp4');
   dom.fileBadge.textContent = isGif ? 'GIF 动图' : 'VIDEO 视频';
   dom.fileBadge.className = isGif ? 'badge' : 'badge badge-emerald';
 
@@ -266,6 +514,7 @@ async function handleFile(file) {
   dom.uploadZone.classList.add('hidden');
   dom.editorWorkspace.classList.remove('hidden');
   updateEstimation();
+  scheduleDraftSave();
 }
 
 // Load Video Media
@@ -478,6 +727,7 @@ function bindTimelineEvents() {
     draggingHandle = null;
     window.removeEventListener('pointermove', onPointerMove);
     window.removeEventListener('pointerup', onPointerUp);
+    scheduleDraftSave();
   };
 
   // Nudge buttons
@@ -625,6 +875,7 @@ function bindCropEvents() {
     activeDrag = null;
     window.removeEventListener('pointermove', onCropMove);
     window.removeEventListener('pointerup', onCropUp);
+    scheduleDraftSave();
   };
 }
 
@@ -964,6 +1215,7 @@ function updateMemePreview() {
 
   dom.watermarkPreview.className = `watermark-text-render pos-${state.watermarkPos}`;
   dom.watermarkPreview.classList.toggle('hidden', !state.watermark.trim());
+  scheduleDraftSave();
 }
 
 // Live size and frame estimation
@@ -999,6 +1251,8 @@ function updateEstimation() {
       dom.estText.textContent = '请先上传需要压缩的 GIF 文件';
     }
   }
+
+  scheduleDraftSave();
 }
 
 // --- Conversion Pipeline ---
